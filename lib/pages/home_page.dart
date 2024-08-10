@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:habbit_tracker/components/my_drawer.dart';
 import 'package:habbit_tracker/components/my_habit_tile.dart';
+import 'package:habbit_tracker/components/my_heat_map.dart';
 import 'package:habbit_tracker/database/habit_database.dart';
 import 'package:habbit_tracker/models/habit.dart';
 import 'package:habbit_tracker/utils/habit_util.dart';
@@ -120,17 +122,14 @@ class _HomePageState extends State<HomePage> {
               //pop box
               Navigator.of(context).pop();
 
-              //clear controller
-              textController.clear();
             },
-            child: const Text("Save"),
+            child: const Text("Delete"),
           ),
 
           //cancel button
           MaterialButton(
             onPressed: () {
               Navigator.of(context).pop();
-              textController.clear();
             },
             child: const Text("Cancel"),
           )
@@ -149,7 +148,33 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         child: const Icon(Icons.add),
       ),
-      body: _buildHabitList(),
+      body: ListView(
+        children: [
+          _buildHeatMap(),
+          _buildHabitList(),
+
+
+        ],
+      )
+    );
+  }
+
+  Widget _buildHeatMap(){
+    final habitDatabase = context.watch<HabitDatabase>();
+    List<Habit> currentHabit = habitDatabase.currentHabit;
+
+    return FutureBuilder<DateTime?>(
+      future: habitDatabase.getFirstLaunchDate(),
+      builder: (context, snapshot) {
+        if(snapshot.hasData){
+          return MyHeatMap(
+            startDate: snapshot.data!,
+            datasets: prepHeatMapDataset(currentHabit),
+          );
+        }else{
+          return Container();
+        }
+      },
     );
   }
 
@@ -159,6 +184,8 @@ class _HomePageState extends State<HomePage> {
     List<Habit> currentHabits = habitDatabase.currentHabit;
 
     return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       itemCount: currentHabits.length,
       itemBuilder: (context, index) {
         final habit = currentHabits[index];
@@ -168,8 +195,8 @@ class _HomePageState extends State<HomePage> {
           isCompleted: isCompletedToday,
           text: habit.name,
           onChanged: (value) => checkHabitOnOff(value,habit),
-          deleteHabit: (context) => editHabitBox,
-          editHabit: (context) => deleteHabitBox,
+          deleteHabit: (context) => editHabitBox(habit),
+          editHabit: (context) => deleteHabitBox(habit),
         );
       },
     );
